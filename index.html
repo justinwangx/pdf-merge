@@ -118,18 +118,46 @@
           <label for="pdfs">Select PDFs</label>
           <input type="file" id="pdfs" accept="application/pdf" multiple />
         </div>
+        <div id="fileList"></div>
       </div>
 
       <!-- Merge button -->
-      <button onclick="mergePDFs()">Merge PDFs</button>
+      <button id="mergeButton" onclick="mergePDFs()" disabled>
+        Merge PDFs
+      </button>
+      <div
+        id="progress"
+        style="display: none; margin-top: 1rem; text-align: center"
+      >
+        Merging PDFs... Please wait.
+      </div>
     </div>
 
     <!-- pdf-lib script (from UNPKG CDN) -->
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
 
     <script>
+      const fileInput = document.getElementById("pdfs");
+      const mergeButton = document.getElementById("mergeButton");
+      const progressDiv = document.getElementById("progress");
+      const fileListDiv = document.getElementById("fileList");
+
+      fileInput.addEventListener("change", () => {
+        const files = Array.from(fileInput.files);
+        mergeButton.disabled = files.length < 2;
+
+        // Display selected files
+        fileListDiv.innerHTML = files.length
+          ? `<div style="margin-top: 1rem;">
+            <strong>Selected files:</strong>
+            <ol style="margin-top: 0.5rem;">
+              ${files.map((file) => `<li>${file.name}</li>`).join("")}
+            </ol>
+          </div>`
+          : "";
+      });
+
       async function mergePDFs() {
-        const fileInput = document.getElementById("pdfs");
         const files = Array.from(fileInput.files);
 
         if (files.length < 2) {
@@ -138,6 +166,9 @@
         }
 
         try {
+          mergeButton.disabled = true;
+          progressDiv.style.display = "block";
+
           // Read all files as ArrayBuffers
           const arrayBuffers = await Promise.all(
             files.map((file) => file.arrayBuffer())
@@ -168,7 +199,8 @@
           // Create a temporary link to trigger a browser download
           const link = document.createElement("a");
           link.href = url;
-          link.download = "merged.pdf";
+          const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+          link.download = `merged_${timestamp}.pdf`;
           document.body.appendChild(link);
           link.click();
 
@@ -180,6 +212,11 @@
           alert(
             "An error occurred while merging PDFs. See console for details."
           );
+        } finally {
+          mergeButton.disabled = false;
+          progressDiv.style.display = "none";
+          fileInput.value = ""; // Reset the file input
+          fileListDiv.innerHTML = ""; // Clear the file list
         }
       }
     </script>
