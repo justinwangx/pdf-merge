@@ -102,6 +102,40 @@
         color: #4a5568;
         font-size: 1.1rem;
       }
+
+      .file-list {
+        margin-top: 1rem;
+      }
+
+      .file-item {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem;
+        margin: 0.25rem 0;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+      }
+
+      .file-item:hover {
+        background: #f1f5f9;
+      }
+
+      .drag-handle {
+        cursor: move;
+        padding: 0 0.5rem;
+        color: #64748b;
+      }
+
+      .file-name {
+        flex-grow: 1;
+      }
+
+      .remove-file {
+        color: #e53e3e;
+        cursor: pointer;
+        padding: 0 0.5rem;
+      }
     </style>
   </head>
   <body>
@@ -118,7 +152,7 @@
           <label for="pdfs">Select PDFs</label>
           <input type="file" id="pdfs" accept="application/pdf" multiple />
         </div>
-        <div id="fileList"></div>
+        <div id="fileList" class="file-list"></div>
       </div>
 
       <!-- Merge button -->
@@ -142,23 +176,85 @@
       const progressDiv = document.getElementById("progress");
       const fileListDiv = document.getElementById("fileList");
 
-      // Store the files in the order they were selected
       let selectedFiles = [];
 
-      fileInput.addEventListener("change", () => {
-        selectedFiles = Array.from(fileInput.files);
+      fileInput.addEventListener("change", (e) => {
+        const newFiles = Array.from(e.target.files);
+        selectedFiles = [...selectedFiles, ...newFiles];
+        updateFileList();
+        fileInput.value = ""; // Reset input to allow selecting same file again
+      });
+
+      function updateFileList() {
         mergeButton.disabled = selectedFiles.length < 2;
 
-        // Display selected files
         fileListDiv.innerHTML = selectedFiles.length
-          ? `<div style="margin-top: 1rem;">
-            <strong>Selected files:</strong>
-            <ol style="margin-top: 0.5rem;">
-              ${selectedFiles.map((file) => `<li>${file.name}</li>`).join("")}
-            </ol>
+          ? `<div>
+            <strong>Selected files (drag to reorder):</strong>
+            ${selectedFiles
+              .map(
+                (file, index) => `
+              <div class="file-item" draggable="true" data-index="${index}">
+                <span class="drag-handle">⋮⋮</span>
+                <span class="file-name">${file.name}</span>
+                <span class="remove-file" onclick="removeFile(${index})">×</span>
+              </div>
+            `
+              )
+              .join("")}
           </div>`
           : "";
-      });
+
+        // Add drag and drop listeners
+        const fileItems = fileListDiv.getElementsByClassName("file-item");
+        Array.from(fileItems).forEach((item) => {
+          item.addEventListener("dragstart", handleDragStart);
+          item.addEventListener("dragover", handleDragOver);
+          item.addEventListener("drop", handleDrop);
+          item.addEventListener("dragenter", handleDragEnter);
+          item.addEventListener("dragleave", handleDragLeave);
+        });
+      }
+
+      function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        updateFileList();
+      }
+
+      let draggedItem = null;
+
+      function handleDragStart(e) {
+        draggedItem = e.target;
+        e.target.style.opacity = "0.5";
+      }
+
+      function handleDragOver(e) {
+        e.preventDefault();
+      }
+
+      function handleDragEnter(e) {
+        e.target.closest(".file-item")?.classList.add("drag-over");
+      }
+
+      function handleDragLeave(e) {
+        e.target.closest(".file-item")?.classList.remove("drag-over");
+      }
+
+      function handleDrop(e) {
+        e.preventDefault();
+        const draggedIndex = parseInt(draggedItem.dataset.index);
+        const dropIndex = parseInt(
+          e.target.closest(".file-item").dataset.index
+        );
+
+        // Reorder the files array
+        const temp = selectedFiles[draggedIndex];
+        selectedFiles.splice(draggedIndex, 1);
+        selectedFiles.splice(dropIndex, 0, temp);
+
+        draggedItem.style.opacity = "1";
+        updateFileList();
+      }
 
       async function mergePDFs() {
         if (selectedFiles.length < 2) {
