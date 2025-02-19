@@ -142,25 +142,26 @@
       const progressDiv = document.getElementById("progress");
       const fileListDiv = document.getElementById("fileList");
 
+      // Store the files in the order they were selected
+      let selectedFiles = [];
+
       fileInput.addEventListener("change", () => {
-        const files = Array.from(fileInput.files);
-        mergeButton.disabled = files.length < 2;
+        selectedFiles = Array.from(fileInput.files);
+        mergeButton.disabled = selectedFiles.length < 2;
 
         // Display selected files
-        fileListDiv.innerHTML = files.length
+        fileListDiv.innerHTML = selectedFiles.length
           ? `<div style="margin-top: 1rem;">
             <strong>Selected files:</strong>
             <ol style="margin-top: 0.5rem;">
-              ${files.map((file) => `<li>${file.name}</li>`).join("")}
+              ${selectedFiles.map((file) => `<li>${file.name}</li>`).join("")}
             </ol>
           </div>`
           : "";
       });
 
       async function mergePDFs() {
-        const files = Array.from(fileInput.files);
-
-        if (files.length < 2) {
+        if (selectedFiles.length < 2) {
           alert("Please select at least two PDF files!");
           return;
         }
@@ -169,9 +170,9 @@
           mergeButton.disabled = true;
           progressDiv.style.display = "block";
 
-          // Read all files as ArrayBuffers
+          // Read all files as ArrayBuffers in the selected order
           const arrayBuffers = await Promise.all(
-            files.map((file) => file.arrayBuffer())
+            selectedFiles.map((file) => file.arrayBuffer())
           );
 
           // Load the first PDF as our base
